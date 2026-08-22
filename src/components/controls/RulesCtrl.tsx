@@ -31,10 +31,6 @@ export default defineComponent({
     const settingsModel = ref(false)
     const isUpgrading = ref(false)
     const { isLargeCtrlsBar } = useCtrlsBar()
-    const hasProviders = computed(() => {
-      return ruleProviderList.value.length > 0
-    })
-
     const handlerClickUpgradeAllProviders = async () => {
       if (isUpgrading.value) return
       isUpgrading.value = true
@@ -69,12 +65,19 @@ export default defineComponent({
     }
 
     const tabsWithNumbers = computed(() => {
-      return Object.values(RULE_TAB_TYPE).map((type) => {
-        return {
-          type,
-          count: type === RULE_TAB_TYPE.RULES ? rules.value.length : ruleProviderList.value.length,
-        }
-      })
+      return Object.values(RULE_TAB_TYPE)
+        .filter((type) => type !== RULE_TAB_TYPE.PROVIDER || ruleProviderList.value.length > 0)
+        .map((type) => {
+          return {
+            type,
+            count:
+              type === RULE_TAB_TYPE.OVERRIDES
+                ? undefined
+                : type === RULE_TAB_TYPE.RULES
+                  ? rules.value.length
+                  : ruleProviderList.value.length,
+          }
+        })
     })
 
     return () => {
@@ -98,7 +101,7 @@ export default defineComponent({
         </button>
       )
 
-      const searchInput = (
+      const searchInput = rulesTabShow.value !== RULE_TAB_TYPE.OVERRIDES && (
         <TextInput
           class={isLargeCtrlsBar.value ? 'w-80' : 'w-32 flex-1'}
           v-model={rulesFilter.value}
@@ -107,7 +110,7 @@ export default defineComponent({
         />
       )
 
-      const settingsModal = (
+      const settingsModal = rulesTabShow.value !== RULE_TAB_TYPE.OVERRIDES && (
         <>
           <button
             class={'btn btn-circle btn-sm'}
@@ -167,12 +170,10 @@ export default defineComponent({
 
       const content = !isLargeCtrlsBar.value ? (
         <div class="flex flex-col gap-2 p-2">
-          {hasProviders.value && (
-            <div class="flex items-center gap-2">
-              {tabs}
-              {upgradeAllIcon}
-            </div>
-          )}
+          <div class="flex items-center gap-2">
+            {tabs}
+            {upgradeAllIcon}
+          </div>
           <div class="flex w-full items-center gap-2">
             {searchInput}
             {settingsModal}
@@ -180,7 +181,7 @@ export default defineComponent({
         </div>
       ) : (
         <div class="flex flex-wrap items-center gap-2 p-2">
-          {hasProviders.value && tabs}
+          {tabs}
           {searchInput}
           <div class="flex-1"></div>
           {upgradeAllIcon}

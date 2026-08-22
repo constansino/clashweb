@@ -18,6 +18,9 @@ export const proxyMap = ref<Record<string, Proxy>>({})
 export const IPv6Map = useStorage<Record<string, boolean>>('cache/ipv6-map', {})
 export const hiddenGroupMap = useStorage<Record<string, boolean>>('config/hidden-group-map', {})
 export const proxyProviederList = ref<ProxyProvider[]>([])
+export const proxyProvidersLoaded = ref(false)
+export const proxyProvidersLoading = ref(false)
+export const hasProxyProviderSupport = computed(() => channel.value === Channel.Clash)
 
 export const speedtestUrlWithDefault = computed(() => {
   return speedtestUrl.value || TEST_URL
@@ -150,6 +153,11 @@ const load = (): Promise<ProxiesBackend> =>
 
 export const fetchProxies = async () => (await load()).fetchProxies()
 
+export const fetchProxyProviders = async (force = false) => {
+  if (!hasProxyProviderSupport.value) return
+  return (await import('./clash')).fetchProxyProviders(force)
+}
+
 // 切换节点只会由用户点击触发,且调用点都是模板里的 @click(没有 catch 的落点),
 // 所以在门面里兜住:失败弹提示,否则 UI 会停在旧选择上一声不吭。
 export const handlerProxySelect = async (proxyGroupName: string, proxyName: string) => {
@@ -176,6 +184,11 @@ export const allProxiesLatencyTest = async () => (await load()).allProxiesLatenc
 export const resetProxies = async () => {
   const m = await import('./singbox')
   m.resetProxies()
+  proxyGroupList.value = []
+  proxyMap.value = {}
+  proxyProviederList.value = []
+  proxyProvidersLoaded.value = false
+  proxyProvidersLoading.value = false
 }
 
 // 代理集 / smart 权重动作(Clash 专属),经 proxies 域门面暴露给 view 与 store/smart。

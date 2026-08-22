@@ -20,7 +20,19 @@ import ConnectionDetails from '@/components/connections/ConnectionDetails.vue'
 import ConnectionTable from '@/components/connections/ConnectionTable.vue'
 import ConnectionCtrl from '@/components/controls/ConnectionCtrl.tsx'
 import { usePaddingForViews } from '@/composables/paddingViews'
+import { sourceIPFilter } from '@/store/connections'
 import { isConnectionCard } from '@/store/settings'
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+watch(
+  () => route.query.sourceIP,
+  (value) => {
+    sourceIPFilter.value = typeof value === 'string' && value ? [value] : null
+  },
+  { immediate: true },
+)
 const { padding } = usePaddingForViews({
   offsetTop: 0,
   offsetBottom: 0,

@@ -2,6 +2,7 @@ import {
   ArrowsRightLeftIcon,
   Cog6ToothIcon,
   CubeTransparentIcon,
+  DevicePhoneMobileIcon,
   DocumentTextIcon,
   GlobeAltIcon,
   SwatchIcon,
@@ -110,6 +111,7 @@ export enum LIST_DISPLAY_STYLE {
 }
 
 export enum RULE_TAB_TYPE {
+  OVERRIDES = 'ruleOverrides',
   RULES = 'rules',
   PROVIDER = 'ruleProvider',
 }
@@ -159,6 +161,7 @@ export enum ROUTE_NAME {
   overview = 'overview',
   proxies = 'proxies',
   connections = 'connections',
+  devices = 'devices',
   logs = 'logs',
   rules = 'rules',
   tools = 'tools',
@@ -170,6 +173,7 @@ export const ROUTE_ICON_MAP = {
   [ROUTE_NAME.overview]: CubeTransparentIcon,
   [ROUTE_NAME.proxies]: GlobeAltIcon,
   [ROUTE_NAME.connections]: ArrowsRightLeftIcon,
+  [ROUTE_NAME.devices]: DevicePhoneMobileIcon,
   [ROUTE_NAME.rules]: SwatchIcon,
   [ROUTE_NAME.logs]: DocumentTextIcon,
   [ROUTE_NAME.tools]: WrenchScrewdriverIcon,

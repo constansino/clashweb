@@ -37,6 +37,10 @@ export const fetchProxiesAPI = () => {
   return axios.get<{ proxies: Record<string, Proxy> }>('/proxies')
 }
 
+export const fetchProxyAPI = (proxyGroup: string) => {
+  return axios.get<Proxy>(`/proxies/${encodeURIComponent(proxyGroup)}`)
+}
+
 export const selectProxyAPI = (proxyGroup: string, name: string) => {
   return axios.put(`/proxies/${encodeURIComponent(proxyGroup)}`, { name })
 }

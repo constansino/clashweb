@@ -4,10 +4,14 @@ import { disconnectByIdAPI } from '@/assembly/connections'
 import {
   allProxiesLatencyTest,
   fetchProxies,
+  fetchProxyProviders,
+  hasProxyProviderSupport,
   hasSmartGroup,
   proxiesFilter,
   proxiesTabShow,
   proxyGroupList,
+  proxyProvidersLoaded,
+  proxyProvidersLoading,
   proxyProviederList,
   updateProxyProviderAPI,
 } from '@/assembly/proxies'
@@ -64,19 +68,20 @@ export default defineComponent({
       if (isUpgrading.value) return
       isUpgrading.value = true
       try {
+        await fetchProxyProviders()
         await Promise.all(
           proxyProviederList.value.map((provider) => updateProxyProviderAPI(provider.name)),
         )
-        await fetchProxies()
+        await Promise.all([fetchProxies(), fetchProxyProviders(true)])
         isUpgrading.value = false
       } catch {
-        await fetchProxies()
+        await Promise.allSettled([fetchProxies(), fetchProxyProviders(true)])
         isUpgrading.value = false
       }
     }
 
     const hasProviders = computed(() => {
-      return proxyProviederList.value.length > 0
+      return hasProxyProviderSupport.value
     })
 
     const foldersUiVisible = computed(
@@ -134,7 +139,9 @@ export default defineComponent({
           count:
             type === PROXY_TAB_TYPE.PROXIES
               ? proxyGroupList.value.length
-              : proxyProviederList.value.length,
+              : proxyProvidersLoaded.value
+                ? proxyProviederList.value.length
+                : t('providersNotLoaded'),
         }
       })
     })
@@ -153,6 +160,7 @@ export default defineComponent({
       const upgradeAllIcon = proxiesTabShow.value === PROXY_TAB_TYPE.PROVIDER && (
         <button
           class="btn btn-circle btn-sm"
+          disabled={proxyProvidersLoading.value || isUpgrading.value}
           onClick={handlerClickUpdateAllProviders}
         >
           <ArrowPathIcon class={['h-4 w-4', isUpgrading.value && 'animate-spin']} />

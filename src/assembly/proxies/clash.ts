@@ -3,6 +3,7 @@
 import {
   deleteFixedProxyAPI,
   fetchProxiesAPI,
+  fetchProxyAPI,
   fetchProxyGroupLatencyAPI,
   fetchProxyLatencyAPI,
   fetchProxyProviderAPI,
@@ -24,6 +25,7 @@ import {
   speedtestMode,
   speedtestTimeout,
 } from '@/store/settings'
+import { activeBackend } from '@/store/setup'
 import { initSmartWeights } from '@/store/smart'
 import type { Proxy } from '@/types'
 import { last } from 'lodash'
@@ -36,40 +38,75 @@ import {
   IPv6Map,
   proxyGroupList,
   proxyMap,
+  proxyProvidersLoaded,
+  proxyProvidersLoading,
   proxyProviederList,
   speedtestUrlWithDefault,
 } from './index'
 
-let fetchTime = 0
+let fetchSequence = 0
+let selectionSequence = 0
+let coreProxyRequest: Promise<void> | null = null
+let coreProxyRequestBackendId = ''
+let providerRequest: Promise<void> | null = null
+let providerRequestBackendId = ''
+const selectionVersionByGroup = new Map<string, number>()
 
-export const fetchProxies = async () => {
-  const nowTime = Date.now()
+const getProviderProxyMap = () => {
+  const providerProxies: Record<string, Proxy> = {}
 
-  fetchTime = nowTime
+  for (const provider of proxyProviederList.value) {
+    for (const proxy of provider.proxies) {
+      proxy['provider-name'] ||= provider.name
+      providerProxies[proxy.name] = proxy
+    }
+  }
 
-  const [proxyRes, providerRes] = await Promise.all([fetchProxiesAPI(), fetchProxyProviderAPI()])
+  return providerProxies
+}
+
+const decorateProxyMap = () => {
+  const smartGroups: string[] = []
+
+  Object.entries(proxyMap.value).forEach(([name, proxy]) => {
+    const iconReflect = iconReflectList.value.find((icon) => icon.name === name)
+
+    if (iconReflect) {
+      proxy.icon = iconReflect.icon
+    }
+    if (IPv6test.value && getIPv6FromExtra(proxy)) {
+      IPv6Map.value[name] = true
+    }
+
+    if (proxy.type.toLowerCase() === PROXY_TYPE.Smart) {
+      smartGroups.push(name)
+    }
+  })
+
+  if (smartGroups.length > 0) {
+    initSmartWeights(smartGroups)
+  }
+}
+
+const fetchCoreProxies = async (backendId: string) => {
+  const requestSequence = ++fetchSequence
+  const selectionSnapshot = selectionSequence
+  const proxyRes = await fetchProxiesAPI()
   const proxyData = proxyRes.data
-  const providerData = providerRes.data
 
-  if (fetchTime !== nowTime) {
+  if (fetchSequence !== requestSequence || (activeBackend.value?.uuid ?? '') !== backendId) {
     return
   }
 
   const sortIndex = proxyData.proxies[GLOBAL]?.all ?? []
-  const allProviderProxies: Record<string, Proxy> = {}
-  const providers = Object.values(providerData.providers).filter(
-    (provider) => provider.name !== 'default' && provider.vehicleType !== 'Compatible',
-  )
-
-  for (const provider of providers) {
-    for (const proxy of provider.proxies) {
-      proxy['provider-name'] ||= provider.name
-      allProviderProxies[proxy.name] = proxy
+  for (const [groupName, version] of selectionVersionByGroup) {
+    if (version > selectionSnapshot && proxyData.proxies[groupName] && proxyMap.value[groupName]) {
+      proxyData.proxies[groupName].now = proxyMap.value[groupName].now
     }
   }
 
   proxyMap.value = {
-    ...allProviderProxies,
+    ...getProviderProxyMap(),
     ...proxyData.proxies,
   }
   proxyGroupList.value = Object.values(proxyData.proxies)
@@ -92,41 +129,93 @@ export const fetchProxies = async () => {
     })
     .map((proxy) => proxy.name)
 
-  proxyProviederList.value = providers
+  decorateProxyMap()
+}
 
-  const smartGroups: string[] = []
+export const fetchProxies = async () => {
+  const backendId = activeBackend.value?.uuid ?? ''
+  if (coreProxyRequest && coreProxyRequestBackendId === backendId) return coreProxyRequest
 
-  Object.entries(proxyMap.value).forEach(([name, proxy]) => {
-    const iconReflect = iconReflectList.value.find((icon) => icon.name === name)
-
-    if (iconReflect) {
-      proxyMap.value[name].icon = iconReflect.icon
-    }
-    if (IPv6test.value && getIPv6FromExtra(proxy)) {
-      IPv6Map.value[name] = true
-    }
-
-    if (proxy.type.toLowerCase() === PROXY_TYPE.Smart) {
-      smartGroups.push(name)
+  coreProxyRequestBackendId = backendId
+  const currentRequest = fetchCoreProxies(backendId)
+  const trackedRequest = currentRequest.finally(() => {
+    if (coreProxyRequest === trackedRequest && coreProxyRequestBackendId === backendId) {
+      coreProxyRequest = null
+      coreProxyRequestBackendId = ''
     }
   })
+  coreProxyRequest = trackedRequest
+  return trackedRequest
+}
 
-  if (smartGroups.length > 0) {
-    initSmartWeights(smartGroups)
-  }
+export const fetchProxyProviders = async (force = false) => {
+  if (proxyProvidersLoaded.value && !force) return
+
+  const backendId = activeBackend.value?.uuid ?? ''
+  if (providerRequest && providerRequestBackendId === backendId) return providerRequest
+
+  proxyProvidersLoading.value = true
+  providerRequestBackendId = backendId
+  const currentRequest = (async () => {
+    const { data } = await fetchProxyProviderAPI()
+    if ((activeBackend.value?.uuid ?? '') !== backendId) return
+
+    proxyProviederList.value = Object.values(data.providers).filter(
+      (provider) => provider.name !== 'default' && provider.vehicleType !== 'Compatible',
+    )
+    proxyMap.value = {
+      ...getProviderProxyMap(),
+      ...proxyMap.value,
+    }
+    for (const provider of proxyProviederList.value) {
+      for (const proxy of provider.proxies) {
+        if (proxyMap.value[proxy.name]) {
+          proxyMap.value[proxy.name]['provider-name'] ||= provider.name
+        }
+      }
+    }
+    proxyProvidersLoaded.value = true
+    decorateProxyMap()
+  })()
+  const trackedRequest = currentRequest.finally(() => {
+    if (providerRequest === trackedRequest && providerRequestBackendId === backendId) {
+      providerRequest = null
+      providerRequestBackendId = ''
+      proxyProvidersLoading.value = false
+    }
+  })
+  providerRequest = trackedRequest
+
+  return providerRequest
 }
 
 export const handlerProxySelect = async (proxyGroupName: string, proxyName: string) => {
   const proxyGroup = proxyMap.value[proxyGroupName]
 
-  if (proxyGroup.type.toLowerCase() === PROXY_TYPE.LoadBalance) return
-  if (proxyGroup.now === proxyName) {
-    await fetchProxies()
-    if (proxyGroup.now === proxyName) return
+  if (!proxyGroup || proxyGroup.type.toLowerCase() === PROXY_TYPE.LoadBalance) return
+  if (proxyGroup.now === proxyName) return
+
+  const previous = proxyGroup.now
+  const version = ++selectionSequence
+  selectionVersionByGroup.set(proxyGroupName, version)
+  proxyGroup.now = proxyName
+
+  try {
+    await selectProxyAPI(proxyGroupName, proxyName)
+  } catch (error) {
+    if (selectionVersionByGroup.get(proxyGroupName) === version && proxyMap.value[proxyGroupName]) {
+      proxyMap.value[proxyGroupName].now = previous
+    }
+    throw error
   }
 
-  await selectProxyAPI(proxyGroupName, proxyName)
-  proxyMap.value[proxyGroupName].now = proxyName
+  if (selectionVersionByGroup.get(proxyGroupName) !== version) {
+    const desired = proxyMap.value[proxyGroupName]?.now
+    if (desired && desired !== proxyName) {
+      await selectProxyAPI(proxyGroupName, desired).catch(() => undefined)
+    }
+    return
+  }
 
   if (automaticDisconnection.value) {
     activeConnections.value
@@ -134,7 +223,18 @@ export const handlerProxySelect = async (proxyGroupName: string, proxyName: stri
       // 切换节点的顺带动作,失败不该盖掉「已切换」这件主事
       .forEach((c) => disconnectByIdAPI(c.id).catch(() => {}))
   }
-  fetchProxies()
+
+  try {
+    const { data } = await fetchProxyAPI(proxyGroupName)
+    if (selectionVersionByGroup.get(proxyGroupName) === version && proxyMap.value[proxyGroupName]) {
+      proxyMap.value[proxyGroupName] = {
+        ...proxyMap.value[proxyGroupName],
+        ...data,
+      }
+    }
+  } catch {
+    // PUT 已成功时保留乐观结果；单组回读失败不应伪装成切换失败。
+  }
 }
 
 const getProviderNameByProxy = (proxyName: string) => {

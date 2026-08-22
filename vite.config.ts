@@ -33,7 +33,7 @@ export default defineConfig({
     __COMMIT_ID__: JSON.stringify(getGitCommitId()),
     __FONT__: JSON.stringify(font),
   },
-  base: './',
+  base: process.env.VITE_BASE_URL || './',
   plugins: [
     vue(),
     vueJsx(),

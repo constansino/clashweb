@@ -6,6 +6,7 @@ import { i18n } from '@/i18n'
 import { language } from '@/store/settings'
 import { activeBackend } from '@/store/setup'
 import ConnectionsPage from '@/views/ConnectionsPage.vue'
+import DevicePage from '@/views/DevicePage.vue'
 import HomePage from '@/views/HomePage.vue'
 import LogsPage from '@/views/LogsPage.vue'
 import OverviewPage from '@/views/OverviewPage.vue'
@@ -32,6 +33,11 @@ const childrenRouter = [
     path: 'connections',
     name: ROUTE_NAME.connections,
     component: ConnectionsPage,
+  },
+  {
+    path: 'devices',
+    name: ROUTE_NAME.devices,
+    component: DevicePage,
   },
   {
     path: 'logs',
@@ -94,6 +100,13 @@ const setTitleByName = (name: string | symbol | undefined) => {
 }
 
 router.beforeEach((to, from) => {
+  if (to.name === ROUTE_NAME.proxies && typeof to.query.device === 'string' && to.query.device) {
+    return {
+      name: ROUTE_NAME.devices,
+      query: { device: to.query.device },
+    }
+  }
+
   resolvePageTransition(to, from)
 
   if (!activeBackend.value && to.name !== ROUTE_NAME.setup) {

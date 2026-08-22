@@ -13,6 +13,13 @@
     >
       <ProxiesCtrl />
       <FolderTopBar v-if="foldersUiVisible" />
+      <div
+        v-if="proxiesTabShow === PROXY_TAB_TYPE.PROVIDER && proxyProvidersLoading"
+        class="flex min-h-40 items-center justify-center gap-2 text-sm"
+      >
+        <span class="loading loading-spinner loading-sm" />
+        <span>{{ $t('loadingProviders') }}</span>
+      </div>
       <template v-if="displayTwoColumns">
         <div class="grid grid-cols-2 gap-3 p-3 md:pr-2">
           <div
@@ -61,8 +68,12 @@ import {
 } from '@/composables/proxies'
 import { PROXY_TAB_TYPE } from '@/constant'
 import { isMiddleScreen } from '@/helper/utils'
-import { fetchProxies } from '@/assembly/proxies'
-import { proxiesTabShow } from '@/assembly/proxies'
+import {
+  fetchProxies,
+  fetchProxyProviders,
+  proxiesTabShow,
+  proxyProvidersLoading,
+} from '@/assembly/proxies'
 import { disableProxiesPageTextSelect, twoColumnProxyGroup } from '@/store/settings'
 import { folderManagerOpen, isProxyFolderModeActive } from '@/store/proxyFolders'
 import { useSessionStorage } from '@vueuse/core'
@@ -104,11 +115,14 @@ const waitTickUntilReady = (startTime = performance.now()) => {
   }
 }
 
-watch(proxiesTabShow, () =>
+watch(proxiesTabShow, (tab) => {
+  if (tab === PROXY_TAB_TYPE.PROVIDER) {
+    fetchProxyProviders().catch(() => undefined)
+  }
   nextTick(() => {
     waitTickUntilReady()
-  }),
-)
+  })
+})
 
 isProxiesPageMounted.value = false
 

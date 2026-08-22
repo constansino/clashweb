@@ -7,7 +7,11 @@
     "
     :style="isRuleTable ? padding : undefined"
   >
-    <template v-if="isRuleTable">
+    <template v-if="rulesTabShow === RULE_TAB_TYPE.OVERRIDES">
+      <RulesCtrl />
+      <RuleOverrides />
+    </template>
+    <template v-else-if="isRuleTable">
       <RulesCtrl />
       <RulesTable />
     </template>
@@ -70,6 +74,7 @@
 import VirtualScroller from '@/components/common/VirtualScroller.vue'
 import RulesCtrl from '@/components/controls/RulesCtrl'
 import RuleCard from '@/components/rules/RuleCard.vue'
+import RuleOverrides from '@/components/rules/RuleOverrides.vue'
 import RuleProvider from '@/components/rules/RuleProvider.vue'
 import RulesTable from '@/components/rules/RulesTable.vue'
 import { usePaddingForViews } from '@/composables/paddingViews'
@@ -84,7 +89,11 @@ fetchRules()
 const expandedRule = ref<string | null>(null)
 provide('expandedRule', expandedRule)
 
-const isRuleTable = computed(() => ruleDisplayStyle.value === LIST_DISPLAY_STYLE.TABLE)
+const isRuleTable = computed(
+  () =>
+    rulesTabShow.value !== RULE_TAB_TYPE.OVERRIDES &&
+    ruleDisplayStyle.value === LIST_DISPLAY_STYLE.TABLE,
+)
 const cardPadding = usePaddingForViews({
   offsetTop: 12,
   offsetBottom: 8,

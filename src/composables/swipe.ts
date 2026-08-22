@@ -1,4 +1,4 @@
-import { proxiesTabShow, proxyProviederList } from '@/assembly/proxies'
+import { hasProxyProviderSupport, proxiesTabShow } from '@/assembly/proxies'
 import { ruleProviderList, rulesTabShow } from '@/assembly/rules'
 import { openDialogCount } from '@/composables/dialog'
 import { useSettingsSection } from '@/composables/settingsSection'
@@ -83,7 +83,7 @@ export const useSwipeRouter = () => {
     return flatten(
       renderRoutes.value.map((r) => {
         if (swipeInTabs.value) {
-          if (r === ROUTE_NAME.proxies && proxyProviederList.value.length > 0) {
+          if (r === ROUTE_NAME.proxies && hasProxyProviderSupport.value) {
             return Object.values(PROXY_TAB_TYPE).map((tab) => {
               return [
                 () => route.name === ROUTE_NAME.proxies && proxiesTabShow.value === tab,

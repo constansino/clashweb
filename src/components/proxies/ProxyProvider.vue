@@ -67,7 +67,11 @@
 </template>
 
 <script setup lang="ts">
-import { proxyProviderHealthCheckAPI, updateProxyProviderAPI } from '@/assembly/proxies'
+import {
+  fetchProxyProviders,
+  proxyProviderHealthCheckAPI,
+  updateProxyProviderAPI,
+} from '@/assembly/proxies'
 import { useBounceOnVisible } from '@/composables/bouncein'
 import { useRenderProxyList } from '@/composables/renderProxies'
 import { notifyRequestError } from '@/helper/requestError'
@@ -143,7 +147,7 @@ const healthCheckClickHandler = async () => {
   isHealthChecking.value = true
   try {
     await proxyProviderHealthCheckAPI(props.name)
-    await fetchProxies()
+    await Promise.all([fetchProxies(), fetchProxyProviders(true)])
   } catch (e) {
     notifyRequestError(e)
   } finally {
@@ -157,7 +161,7 @@ const updateProviderClickHandler = async () => {
   isUpdating.value = true
   try {
     await updateProxyProviderAPI(props.name)
-    await fetchProxies()
+    await Promise.all([fetchProxies(), fetchProxyProviders(true)])
   } catch (e) {
     notifyRequestError(e)
   } finally {
