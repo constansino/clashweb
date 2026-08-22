@@ -102,7 +102,26 @@ const managerState = {
   global_rules: [{ type: 'DOMAIN-SUFFIX', match: 'news.example.net', target: 'Global Select' }],
 }
 
-let dashboardSettings = {}
+let dashboardSettings = {
+  'config/proxy-folder-mode-setting': JSON.stringify('on'),
+  'config/proxy-group-columns': JSON.stringify(2),
+  'config/proxy-group-folder-meta-map': JSON.stringify({
+    'demo-everyday': {
+      custom: true,
+      height: 'open',
+      name: 'Everyday',
+      span: 2,
+    },
+  }),
+  'config/proxy-group-folder-assignments': JSON.stringify({
+    'Global Select': 'demo-everyday',
+    Streaming: 'demo-everyday',
+  }),
+  'config/proxy-group-entry-order': JSON.stringify(['folder:demo-everyday']),
+  'config/proxy-group-folder-child-order': JSON.stringify({
+    'demo-everyday': ['Global Select', 'Streaming'],
+  }),
+}
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
