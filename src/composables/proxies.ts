@@ -9,7 +9,6 @@ import {
 } from '@/assembly/proxies'
 import { GLOBAL, PROXY_TAB_TYPE } from '@/constant'
 import { isHiddenGroup } from '@/helper'
-import { groupsInActiveFolder, isProxyFolderModeActive } from '@/store/proxyFolders'
 import { customGlobalNode, displayGlobalByMode, manageHiddenGroup } from '@/store/settings'
 import { isEmpty } from 'lodash'
 import { computed, ref } from 'vue'
@@ -98,9 +97,5 @@ export const renderProxiesPageItems = computed(() => {
     return renderProxyProviders.value
   }
 
-  const groups = renderProxyGroups.value
-  if (!isProxyFolderModeActive.value) return groups
-  const filter = groupsInActiveFolder.value
-  if (!filter) return groups
-  return groups.filter((name) => filter.has(name))
+  return renderProxyGroups.value
 })
