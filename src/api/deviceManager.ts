@@ -66,11 +66,7 @@ const readJson = async (response: Response) => {
 }
 
 export const fetchDeviceManagerStatus = async () => {
-  const endpoint = getManagerEndpoint()
-  if (!endpoint) throw new Error('当前没有可用的 Mihomo 后端')
-  return (await readJson(
-    await fetch(`${endpoint}?action=status`, { cache: 'no-store' }),
-  )) as unknown as DeviceManagerStatus
+  return (await callDeviceManager('status')) as unknown as DeviceManagerStatus
 }
 
 export const callDeviceManager = async (action: string, value = '') => {

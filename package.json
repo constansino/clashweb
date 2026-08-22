@@ -1,7 +1,8 @@
 {
-  "name": "zashboard",
+  "name": "clashweb",
   "version": "3.21.0",
-  "description": "A Dashboard Using Clash API",
+  "description": "A Zashboard-based Mihomo dashboard with device policies and hot rule overrides",
+  "repository": "https://github.com/constansino/clashweb",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -12,6 +13,7 @@
     "build:no-fonts": "FONT=none vite build",
     "build:pingfang-only": "FONT=pingfang vite build",
     "build:sarasa-only": "FONT=sarasa vite build",
+    "demo": "pnpm build && node demo/mock-server.mjs",
     "dev": "vite",
     "format": "prettier --write src/",
     "generate": "buf generate",
@@ -70,6 +72,7 @@
     "@types/lodash": "^4.17.24",
     "@types/node": "^26.1.2",
     "@types/w3c-web-usb": "^1.0.14",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitejs/plugin-vue-jsx": "^5.1.6",
     "@vue/eslint-config-prettier": "^10.2.0",
@@ -86,7 +89,8 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "vite": "^8.1.5",
-    "vue-tsc": "^3.3.8"
+    "vue-tsc": "^3.3.8",
+    "ws": "^8.21.3"
   },
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
 }
