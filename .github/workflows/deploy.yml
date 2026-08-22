@@ -43,7 +43,7 @@ jobs:
           sh -n router/mihomo-manager.sh
 
       - name: Upload dashboard artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: clashweb-dist
           path: dist
