@@ -103,7 +103,7 @@ const managerState = {
 }
 
 let dashboardSettings = {
-  'config/proxy-folder-mode-setting': JSON.stringify('on'),
+  'config/proxy-folder-mode-setting': 'on',
   'config/proxy-group-columns': JSON.stringify(2),
   'config/proxy-group-folder-meta-map': JSON.stringify({
     'demo-everyday': {
