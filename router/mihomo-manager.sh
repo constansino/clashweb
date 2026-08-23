@@ -1089,20 +1089,33 @@ disable_cn() {
 start_web() {
   find_usb
   [ -x /usr/sbin/uhttpd ] || return 0
-  if netstat -lntup 2>/dev/null | grep -q ":$PORT[[:space:]].*uhttpd"; then
-    return 0
-  fi
+  found_manager_web=0
   for f in /proc/[0-9]*/cmdline; do
     cmd="$(tr '\0' ' ' < "$f" 2>/dev/null || true)"
     case "$cmd" in
-      *"mihomo-manager/www"*)
+      *"uhttpd"*"mihomo-manager/www"*"0.0.0.0:$PORT"*)
+        found_manager_web=1
+        case " $cmd " in
+          *" -t 120 -T 120 "*) return 0 ;;
+        esac
         pid="${f#/proc/}"
         pid="${pid%/cmdline}"
         kill "$pid" >/dev/null 2>&1 || true
       ;;
     esac
   done
-  uhttpd -f -h "$WWW" -I index.html -x /cgi-bin -p 0.0.0.0:$PORT -t 30 -T 30 >/tmp/mihomo-manager-uhttpd.log 2>&1 &
+  if [ "$found_manager_web" = 1 ]; then
+    i=0
+    while [ "$i" -lt 10 ] && netstat -lntup 2>/dev/null | grep -q ":$PORT[[:space:]]"; do
+      sleep 1
+      i=$((i + 1))
+    done
+  fi
+  if netstat -lntup 2>/dev/null | grep -q ":$PORT[[:space:]]"; then
+    log_msg "manager web port $PORT is occupied"
+    return 1
+  fi
+  uhttpd -f -h "$WWW" -I index.html -x /cgi-bin -p 0.0.0.0:$PORT -t 120 -T 120 >/tmp/mihomo-manager-uhttpd.log 2>&1 &
 }
 
 guard() {
@@ -2120,7 +2133,7 @@ set_device_policy_value() {
   cp -f "$DEVICE_POLICIES" "$old"
   previous="$(device_default_target "$ip")"
   previous_mac="$(awk -F '\t' -v ip="$ip" '$1 == ip {print $4; exit}' "$DEVICE_POLICIES" 2>/dev/null)"
-  if [ -n "$previous" ] && [ "$target" != "INHERIT" ] && [ "$mac" = "$previous_mac" ]; then
+  if [ -n "$previous" ] && [ "$previous" != "INHERIT" ] && [ "$target" != "INHERIT" ] && [ "$mac" = "$previous_mac" ]; then
     group="$(device_group_name "$ip")"
     group_path="$(url_path_encode "$group")"
     if set_device_selector_fast "$group_path" "$target"; then
@@ -2137,13 +2150,26 @@ set_device_policy_value() {
       log_msg "switch device policy $ip -> $target"
       return 0
     fi
-    rm -f "$old"
-    return 1
+    # A stale or slow selector should not make the whole update fail. Rebuild the
+    # device policy below so the requested target is still applied atomically.
   fi
   awk -F '\t' -v ip="$ip" '$1 != ip' "$DEVICE_POLICIES" > "$DEVICE_POLICIES.new.$$"
   printf '%s\t%s\t%s\t%s\n' "$ip" "${label:--}" "$target" "$mac" >> "$DEVICE_POLICIES.new.$$"
   mv -f "$DEVICE_POLICIES.new.$$" "$DEVICE_POLICIES"
-  if apply_device_policies; then rm -f "$old"; return 0; fi
+  if apply_device_policies; then
+    if [ "$target" != "INHERIT" ]; then
+      group="$(device_group_name "$ip")"
+      group_path="$(url_path_encode "$group")"
+      if ! set_device_selector_fast "$group_path" "$target"; then
+        mv -f "$old" "$DEVICE_POLICIES"
+        apply_device_policies >/dev/null 2>&1 || true
+        return 1
+      fi
+      close_device_connections "$ip"
+    fi
+    rm -f "$old"
+    return 0
+  fi
   mv -f "$old" "$DEVICE_POLICIES"
   return 1
 }
@@ -2533,6 +2559,15 @@ cgi_reply() {
 }
 
 cgi() {
+  if [ "${REQUEST_METHOD:-}" = "OPTIONS" ]; then
+    printf 'Status: 204 No Content\r\n'
+    printf 'Access-Control-Allow-Origin: *\r\n'
+    printf 'Access-Control-Allow-Methods: POST, OPTIONS\r\n'
+    printf 'Access-Control-Allow-Headers: Content-Type\r\n'
+    printf 'Access-Control-Max-Age: 86400\r\n'
+    printf 'Content-Length: 0\r\n\r\n'
+    return
+  fi
   find_usb
   body=""
   [ "$REQUEST_METHOD" = "POST" ] && body="$(cat)"
