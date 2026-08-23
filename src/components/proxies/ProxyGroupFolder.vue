@@ -8,7 +8,7 @@
   >
     <header class="proxy-folder-header flex min-h-10 items-center gap-2 py-1.5">
       <button
-        class="no-layout-drag flex min-w-0 flex-1 items-center gap-2 text-left"
+        class="proxy-layout-drag-surface no-layout-drag flex min-w-0 flex-1 items-center gap-2 text-left"
         :aria-expanded="isOpen"
         @click.stop="isOpen = !isOpen"
       >
@@ -81,6 +81,7 @@
           :class="isChildDropTarget(child.name) && 'proxy-folder-child-over'"
           :data-proxy-folder-id="folder.id"
           :data-proxy-folder-child-name="child.name"
+          @pointerdown.stop="handlerChildPointerDown($event, child.name)"
           @dragover.prevent.stop="handlerChildDragOver($event, child.name)"
           @dragleave.stop="handlerChildDragLeave(child.name)"
           @drop.prevent.stop="handlerChildDrop($event, child.name)"
@@ -372,6 +373,15 @@ const handlerChildDrop = (event: DragEvent, groupName: string) => {
   border-bottom: 1px solid color-mix(in srgb, var(--color-base-content) 12%, transparent);
 }
 
+.proxy-layout-drag-surface {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.proxy-layout-drag-surface:active {
+  cursor: grabbing;
+}
+
 .proxy-folder-over {
   border-left-color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 6%, transparent);
@@ -382,7 +392,19 @@ const handlerChildDrop = (event: DragEvent, groupName: string) => {
 }
 
 .proxy-folder-child {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: pan-y;
   transition: transform 0.16s ease;
+}
+
+.proxy-folder-child :deep(*) {
+  -webkit-user-drag: none;
+}
+
+.proxy-folder-child:active {
+  cursor: grabbing;
 }
 
 .proxy-folder-child-over {

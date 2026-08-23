@@ -56,6 +56,7 @@
               :data-proxy-layout-key="item.key"
               :data-proxy-folder-id="item.type === 'folder' ? item.id : undefined"
               :data-proxy-group-name="item.type === 'group' ? item.name : undefined"
+              @pointerdown="handlerEntryPointerDown($event, item)"
               @dragstart="handlerEntryDragStart($event, item)"
               @dragover.prevent="handlerEntryDragOver($event, item)"
               @dragleave="handlerEntryDragLeave(item)"
@@ -94,6 +95,7 @@
             :data-proxy-folder-id="section.item.type === 'folder' ? section.item.id : undefined"
             :data-proxy-group-name="section.item.type === 'group' ? section.item.name : undefined"
             :style="getSpanItemStyle(section.span)"
+            @pointerdown="handlerEntryPointerDown($event, section.item)"
             @dragstart="handlerEntryDragStart($event, section.item)"
             @dragover.prevent="handlerEntryDragOver($event, section.item)"
             @dragleave="handlerEntryDragLeave(section.item)"
@@ -379,7 +381,7 @@ const getSpanItemStyle = (span: number) => {
 }
 
 const layoutDragEnabled = computed(() => {
-  return foldersUiVisible.value && proxyLayoutEditing.value
+  return foldersUiVisible.value
 })
 const dragOverKey = ref('')
 const dragOverColumnKey = ref('')
@@ -447,6 +449,10 @@ const isInteractivePointerTarget = (target: EventTarget | null, allowNoLayoutDra
   }
 
   if (element.closest('.proxy-layout-drag-handle')) {
+    return false
+  }
+
+  if (element.closest('.proxy-layout-drag-surface')) {
     return false
   }
 
@@ -739,18 +745,18 @@ onBeforeUnmount(clearPointerDrag)
     transform 0.16s ease;
 }
 
-.proxy-layout-item.proxy-layout-editing {
+.proxy-layout-item {
   cursor: grab;
   user-select: none;
   -webkit-user-drag: none;
   touch-action: pan-y;
 }
 
-.proxy-layout-item.proxy-layout-editing :deep(*) {
+.proxy-layout-item :deep(*) {
   -webkit-user-drag: none;
 }
 
-.proxy-layout-item.proxy-layout-editing:active {
+.proxy-layout-item:active {
   cursor: grabbing;
 }
 
